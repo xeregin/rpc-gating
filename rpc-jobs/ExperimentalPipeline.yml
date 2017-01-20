@@ -1,0 +1,29 @@
+- job:
+    name: Experimental Pipeline
+    project-type: workflow
+    concurrent: true
+    parameters:
+      - string:
+          name: RPC_GATING_REPO
+          default: "https://github.com/rcbops/rpc-gating"
+      - string:
+          name: RPC_GATING_BRANCH
+          default: "issue/806"
+      - string:
+          name: NUM_NODES
+          default: "5"
+    dsl: |
+      node(){
+        git branch: env.RPC_GATING_BRANCH, url: env.RPC_GATING_REPO
+        stage ('Allocate Node'){
+          def allocate_node = load 'Pipeline_Library/allocate_node_dummy.groovy'
+          nodes = allocate_node nodeprefix: 'testnode', numnodes: env.NUM_NODES.toInteger()
+        }
+      }
+      // using a different node block to check that vars persist.
+      node(){
+        stage ('Cleanup'){
+          def cleanup = load 'Pipeline_Library/cleanup_dummy.groovy'
+          cleanup nodes: nodes
+        }
+      }
