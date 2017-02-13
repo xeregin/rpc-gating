@@ -1,5 +1,5 @@
 - job:
-    name: RPC_AIO
+    name: RPC_AIO_Experimental
     project-type: workflow
     concurrent: true
     properties:
@@ -9,14 +9,16 @@
       # See params.yml
       - rpc_params
       - rpc_gating_params
+      - ara_params
       - single_use_slave_params
       - tempest_params
       - string:
           name: STAGES
-          default: "Allocate Resources, Connect Slave, Prepare Deployment, Deploy, Install Tempest, Tempest Tests, Cleanup"
+          default: "Clear Workspace, Allocate Resources, Connect Slave, Prepare Deployment, Deploy, Install Tempest, Tempest Tests, Cleanup"
           description: |
             Pipeline stages to run CSV. Note that this list does not influence execution order.
             Options:
+              Clear Workspace (Clear the workspace on the CIT Jenkins slave at the start of the run)
               Allocate Resources
               Connect Slave
               Prepare Deployment
@@ -48,6 +50,9 @@
     dsl: |
       // CIT Slave node
       node(){
+        if (env.STAGES.contains("Clear Workspace")){
+          deleteDir()
+        }
         try {
           dir("rpc-gating"){
               git branch: env.RPC_GATING_BRANCH, url: env.RPC_GATING_REPO

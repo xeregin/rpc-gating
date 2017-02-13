@@ -4,7 +4,7 @@ import groovy.json.JsonOutput
 // Install ansible on a jenkins slave
 def install_ansible(){
   sh """
-    #!/bin/bash
+    #!/bin/bash -x
     which scl && source /opt/rh/python27/enable
     if [[ ! -d ".venv" ]]; then
         virtualenv --python=/opt/rh/python27/root/usr/bin/python .venv
@@ -17,7 +17,34 @@ def install_ansible(){
     pip install -U six packaging appdirs
     pip install -U setuptools pip
     pip install -U ansible pyrax
+
+    pip install -e ${env.ARA_REPO}@${env.ARA_BRANCH}#egg=ara
+    mkdir -p ${env.WORKSPACE}/callbacks
+    cp .venv/src/ara/ara/plugins/callbacks/log_ara.py ${env.WORKSPACE}/callbacks
   """
+}
+
+/* ARA records data about ansible task results,
+ * This function calls ara to generate a junit file from
+ * the ara database, and submits it to jenkins.
+ * This allows jenkins to record each ansible task as a
+ * unit test.
+ */
+def submit_ara(Map args){
+      withEnv([
+        "ARA_DIR=${env.WORKSPACE}"
+      ]){
+          sh """#!/bin/bash -x
+            . ${args.venv}/bin/activate
+            rm junit.xml ||:
+            ara generate junit junit.xml ||:
+          """
+          junit allowEmptyResults: true, testResults: 'junit.xml'
+          sh """#!/bin/bash -x
+            rm junit.xml ||:
+            rm -rf ${env.WORKSPACE}/ansible.sqlite
+          """
+        }
 }
 
 /* Run ansible-playbooks within a venev
@@ -33,7 +60,10 @@ def install_ansible(){
  */
 def venvPlaybook(Map args){
   withEnv(['ANSIBLE_FORCE_COLOR=true',
-           'ANSIBLE_HOST_KEY_CHECKING=False']){
+           'ANSIBLE_HOST_KEY_CHECKING=False',
+           "ANSIBLE_CALLBACK_PLUGINS=${env.WORKSPACE}/callbacks",
+           "ARA_DIR=${env.WORKSPACE}"
+           ]){
     ansiColor('xterm'){
       if (!('vars' in args)){
         args.vars=[:]
@@ -48,11 +78,19 @@ def venvPlaybook(Map args){
         playbook = args.playbooks[i]
         vars_file="vars.${playbook}"
         write_json(file: vars_file, obj: args.vars)
-        sh """
-          which scl && source /opt/rh/python27/enable
-          . ${args.venv}/bin/activate
-          ansible-playbook -v --ssh-extra-args="-o  UserKnownHostsFile=/dev/null" ${args.args.join(' ')} -e@${vars_file} ${playbook}
-        """
+        try{
+          sh """#!/bin/bash -x
+            env
+            which scl && source /opt/rh/python27/enable
+            . ${args.venv}/bin/activate
+            ansible-playbook -v --ssh-extra-args="-o  UserKnownHostsFile=/dev/null" ${args.args.join(' ')} -e@${vars_file} ${playbook}
+          """
+        }catch(e){
+          print(e)
+          throw(e)
+        }finally{
+          submit_ara(venv: args.venv)
+        } //finally
       } //for
     } //color
   } //withenv
@@ -70,13 +108,50 @@ def openstack_ansible(Map args){
     dir(args.path){
       withEnv([
         'ANSIBLE_FORCE_COLOR=true',
-        'ANSIBLE_HOST_KEY_CHECKING=False'])
+        'ANSIBLE_HOST_KEY_CHECKING=False',
+        "ANSIBLE_CALLBACK_PLUGINS=${env.WORKSPACE}/callbacks",
+        "ARA_DIR=${env.WORKSPACE}"
+      ])
       {
-        sh """#!/bin/bash
-          openstack-ansible ${args.playbook} \
-            -v --ssh-extra-args="-o  UserKnownHostsFile=/dev/null" \
-            ${args.args}
-        """
+        try{
+          sh """#!/bin/bash -x
+            osavenv="/opt/ansible-runtime"
+            . \${osavenv}/bin/activate
+
+            ### Install and enable ARA if available ansible is new enough.
+            # don't upgrade ansible, because that may break legacy branches.
+            ansible_version=\$(pip freeze |sed -n '/ansible==/s|ansible==||p')
+            required_ansible_version="2.1.0.0"
+
+            # 0: x<y, 1: x==y, 2: x>y
+            python -c "import sys
+sys.exit(1+cmp(
+  map(int, '\${ansible_version}'.split('.')),
+  map(int, '\${required_ansible_version}'.split('.'))
+))"; cmp=\$?
+
+            # Ansible version is greater than or equal to required version
+            if (( \$cmp > 0 ))
+            then
+              which ara || {
+                pip install -e ${env.ARA_REPO}@${env.ARA_BRANCH}#egg=ara
+                mkdir -p ${env.WORKSPACE}/callbacks
+                cp \${osavenv}/src/ara/ara/plugins/callbacks/log_ara.py ${env.WORKSPACE}/callbacks
+              }
+            fi
+            deactivate
+
+            ### Run the playbook
+            openstack-ansible ${args.playbook} \
+              -v --ssh-extra-args="-o  UserKnownHostsFile=/dev/null" \
+              ${args.args}
+          """
+        }catch(e){
+          print(e)
+          throw(e)
+        }finally{
+          submit_ara(venv: "/opt/ansible-runtime")
+        } //finally
       } //withEnv
     } //dir
   } //colour

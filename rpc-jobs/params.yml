@@ -54,3 +54,13 @@
           description: |
             Options to pass to run_tempest.sh via openstack_tempest_gate.sh
             Note that both are deprecated and will be replaced in future.
+
+- parameter:
+    name: ara_params
+    parameters:
+      - string:
+          name: ARA_REPO
+          default: "git://github.com/openstack/ara.git"
+      - string:
+          name: ARA_BRANCH
+          default: "master"
