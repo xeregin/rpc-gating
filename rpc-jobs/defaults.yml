@@ -1,0 +1,14 @@
+- defaults:
+    name: global
+    SINGLE_USE_SLAVE_REGION: IAD
+    SINGLE_USE_SLAVE_FLAVOR: "performance2-15"
+    SINGLE_USE_SLAVE_IMAGE: "Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM)"
+    SINGLE_USE_SLAVE_INSTANCE_NAME: "AUTO"
+    RPC_REPO: "https://github.com/rcbops/rpc-openstack"
+    RPC_BRANCH: "master"
+    RPC_GATING_REPO: "https://github.com/rcbops/rpc-gating"
+    RPC_GATING_BRANCH: "master"
+    TEMPEST_TEST_SETS: "scenario defcore cinder_backup"
+    RUN_TEMPEST_OPTS: "--serial"
+    CRON: "H H(9-21) * * 1-5"
+

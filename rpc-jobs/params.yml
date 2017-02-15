@@ -4,16 +4,16 @@
     parameters:
       - string:
           name: REGION
-          default: "IAD"
+          default: "{SINGLE_USE_SLAVE_REGION}"
       - string:
           name: FLAVOR
-          default: "performance2-15"
+          default: "{SINGLE_USE_SLAVE_FLAVOR}"
       - string:
           name: IMAGE
-          default: "Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM)"
+          default: "{SINGLE_USE_SLAVE_IMAGE}"
       - string:
           name: INSTANCE_NAME
-          default: AUTO
+          default: "{SINGLE_USE_SLAVE_INSTANCE_NAME}"
           description: |
             Set instance name or "AUTO" to have it generated based on job
             name and build number. Beware the 63 char container name limit
@@ -24,33 +24,33 @@
     parameters:
       - string:
           name: "RPC_REPO"
-          default: "https://github.com/rcbops/rpc-openstack"
+          default: "{RPC_REPO}"
       - string:
           name: "RPC_BRANCH"
-          default: "master"
+          default: "{RPC_BRANCH}"
 
 - parameter:
     name: rpc_gating_params
     parameters:
       - string:
           name: RPC_GATING_REPO
-          default: "https://github.com/rcbops/rpc-gating"
+          default: "{RPC_GATING_REPO}"
       - string:
           name: RPC_GATING_BRANCH
-          default: "master"
+          default: "{RPC_GATING_BRANCH}"
 
 - parameter:
     name: tempest_params
     parameters:
       - string:
           name: "TEMPEST_TEST_SETS"
-          default: "scenario defcore cinder_backup"
+          default: "{TEMPEST_TEST_SETS}"
           description: |
             Test sets (space seperated). Test sets are defined in
             https://github.com/openstack/openstack-ansible-os_tempest/blob/master/templates/openstack_tempest_gate.sh.j2
       - string:
           name: "RUN_TEMPEST_OPTS"
-          default: "--serial"
+          default: "{RUN_TEMPEST_OPTS}"
           description: |
             Options to pass to run_tempest.sh via openstack_tempest_gate.sh
             Note that both are deprecated and will be replaced in future.

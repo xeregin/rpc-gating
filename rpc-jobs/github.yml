@@ -1,0 +1,32 @@
+---
+# Github related JJB macros
+
+- property:
+    name: rpc-openstack-github
+    properties:
+      - github:
+          url: https://github.com/rcbops/rpc-openstack
+
+- property:
+    name: rpc-gating-github
+    properties:
+      - github:
+          url: https://github.com/rcbops/rpc-gating
+
+- trigger:
+    name: pr
+    triggers:
+      - github-pull-request:
+          allow-whitelist-orgs-as-admins: true
+          org-list:
+            - rcbops
+          github-hooks: false
+          # schedule for polling github as we can't receive webhooks yet :(
+          #cron:  "H/5 * * * *" <-- Default
+          trigger-phrase: '.*recheck_all.*|.*recheck_{context}.*'
+          only-trigger-phrase: false
+          white-list-target-branches:
+            - "{branches}"
+          status-context: '{context}'
+
+
