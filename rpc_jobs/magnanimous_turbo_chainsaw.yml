@@ -7,6 +7,27 @@
       - 'Component-Gate-Trigger_{repo_name}'
 
 - project:
+    name: magnanimous-turbo-chainsaw-aio-postmerge-build
+    repo:
+      - magnanimous-turbo-chainsaw:
+          URL: https://github.com/rcbops/magnanimous-turbo-chainsaw
+          BRANCH: master
+    image:
+      - bionic:
+          IMAGE: "nodepool-ubuntu-bionic-"
+      - xenial:
+          IMAGE: "nodepool-ubuntu-xenial-"
+      - trusty:
+          IMAGE: "nodepool-ubuntu-trusty-"
+    action:
+      - deploy-fleet
+      - deploy-elk
+      - deploy-skydive
+      - deploy-all
+    jobs:
+      - 'PM_{repo}-{BRANCH}-{image}-{action}'
+
+- project:
     name: magnanimous-turbo-chainsaw-re-release-pr
     repo:
       - magnanimous-turbo-chainsaw:
